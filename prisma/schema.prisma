@@ -1,0 +1,120 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  ADMIN
+  CUSTOMER
+}
+
+enum OrderType {
+  DELIVERY
+  PICKUP
+}
+
+enum OrderStatus {
+  PENDING
+  CONFIRMED
+  PROCESSING
+  READY
+  COMPLETED
+  CANCELLED
+}
+
+enum PaymentMethod {
+  TRANSFER
+  CASH
+}
+
+enum PaymentStatus {
+  UNPAID
+  WAITING_VERIFICATION
+  PAID
+  REJECTED
+}
+
+model User {
+  id        Int       @id @default(autoincrement())
+  name      String
+  email     String    @unique
+  password  String
+  role      Role      
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  orders    Order[]
+}
+
+model Category {
+  id          Int       @id @default(autoincrement())
+  name        String    @unique
+  description String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  foods       Food[]
+}
+
+model Food {
+  id                    Int         @id @default(autoincrement())
+  categoryId            Int
+  name                  String
+  description           String
+  price                 Int
+  stock                 Int         @default(0)
+  image                 String?
+  origin                String      @default("Malang")
+  isAvailable           Boolean     @default(true)
+  createdAt             DateTime    @default(now())
+  updatedAt             DateTime    @updatedAt
+  category              Category    @relation(fields: [categoryId], references: [id])
+  orderItems            OrderItem[]
+}
+
+model Order {
+  id                  Int           @id @default(autoincrement())
+  userId              Int
+  orderDate           DateTime      @default(now())
+  totalPrice          Int
+  orderType           OrderType
+  address             String?
+  status              OrderStatus   @default(PENDING)
+  createdAt           DateTime      @default(now())
+  updatedAt           DateTime      @updatedAt
+  user                User          @relation(fields: [userId], references: [id])
+  orderItems          OrderItem[]
+  payment             Payment?
+}
+
+model OrderItem {
+  id       Int   @id @default(autoincrement())
+  orderId  Int
+  foodId   Int
+  quantity Int
+  price    Int
+  subtotal Int
+  order    Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  food     Food  @relation(fields: [foodId], references: [id])
+}
+
+model Payment {
+  id            Int           @id @default(autoincrement())
+  orderId       Int           @unique
+  method        PaymentMethod
+  amount        Int
+  paymentProof  String?
+  status        PaymentStatus @default(UNPAID)
+  paidAt        DateTime?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+  order         Order         @relation(fields: [orderId], references: [id], onDelete: Cascade)
+}
