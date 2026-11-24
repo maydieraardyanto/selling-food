@@ -20,64 +20,58 @@ export class AuthService {
   ) {}
 
   // REGISTER
-async register(data: RegisterDto) {
-  const email = data.email.toLowerCase();
+  async register(data: RegisterDto) {
+    const email = data.email.toLowerCase();
 
-  const existingUser = await this.prisma.user.findUnique({
-    where: { email },
-  });
+    const existingUser = await this.prisma.user.findUnique({
+      where: { email },
+    });
 
-  if (existingUser) {
-    throw new ConflictException('Email sudah terdaftar');
+    if (existingUser) {
+      throw new ConflictException('Email sudah terdaftar');
+    }
+
+    const hashedPassword = await bcrypt.hash(data.password, 10);
+
+    const user = await this.prisma.user.create({
+      data: {
+        name: data.name,
+        email,
+        password: hashedPassword,
+        role: data.role,
+      },
+    });
+
+    return {
+      message: 'Registrasi berhasil',
+      data: {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+      },
+    };
   }
-
-  const hashedPassword = await bcrypt.hash(data.password, 10);
-
-  const user = await this.prisma.user.create({
-    data: {
-      name: data.name,
-      email,
-      password: hashedPassword,
-      role: data.role,
-    },
-  });
-
-  return {
-    message: 'Registrasi berhasil',
-    data: {
-      id: user.id,
-      name: user.name,
-      email: user.email,
-      role: user.role,
-    },
-  };
-}
 
   // LOGIN
   async login(data: LoginDto) {
     const email = data.email.toLowerCase();
 
-    // Cari user
     const user = await this.prisma.user.findUnique({
       where: { email },
     });
 
     if (!user) {
-      throw new UnauthorizedException(
-        'Email atau password salah',
-      );
+      throw new UnauthorizedException('Email atau password salah');
     }
 
-    // Cocokkan password
     const isMatch = await bcrypt.compare(
       data.password,
       user.password,
     );
 
     if (!isMatch) {
-      throw new UnauthorizedException(
-        'Email atau password salah',
-      );
+      throw new UnauthorizedException('Email atau password salah');
     }
 
     // CUSTOMER tidak mendapatkan token
@@ -112,7 +106,25 @@ async register(data: RegisterDto) {
     };
   }
 
-  // GET PROFILE
+  // GET ALL PROFILE
+  async getAllProfile() {
+    const users = await this.prisma.user.findMany({
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        role: true,
+        createdAt: true,
+      },
+    });
+
+    return {
+      message: 'Berhasil mengambil semua data user',
+      data: users,
+    };
+  }
+
+  // GET PROFILE BERDASARKAN ID
   async getProfile(id: number) {
     const user = await this.prisma.user.findUnique({
       where: { id },
@@ -148,7 +160,6 @@ async register(data: RegisterDto) {
       throw new NotFoundException('User tidak ditemukan');
     }
 
-    // Cek email jika diubah
     if (data.email) {
       const email = data.email.toLowerCase();
 

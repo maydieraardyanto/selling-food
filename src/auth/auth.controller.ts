@@ -34,7 +34,15 @@ export class AuthController {
     return this.authService.login(data);
   }
 
-  // GET PROFILE - ADMIN ONLY
+  // GET ALL PROFILE - ADMIN ONLY
+  @Get('profiles')
+  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @Roles('ADMIN')
+  getAllProfile() {
+    return this.authService.getAllProfile();
+  }
+
+  // GET PROFILE BERDASARKAN ID - ADMIN ONLY
   @Get('profile/:id')
   @UseGuards(AuthGuard('jwt'), RolesGuard)
   @Roles('ADMIN')
